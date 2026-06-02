@@ -327,21 +327,13 @@ Managed Pipeline Mode: Integrated
 Identity: ApplicationPoolIdentity (o usuario específico)
 ```
 
----
 
-## 📞 Soporte
-
-Para incidencias o consultas técnicas, contacte a:
-
-**Dirección de TI**  
-Instituto Profesional Del Comercio Spa.  
-Email: ti@instituto.cl
 
 ---
 
 ## 📝 Licencia
 
-© 2024 Instituto Profesional Del Comercio Spa.  
+© 2026 Instituto Profesional Del Comercio Spa.  
 Todos los derechos reservados. Uso interno institucional.
 
 ---
