@@ -1,0 +1,6 @@
+nombre_software,version,tipo_licencia,clave_producto,fecha_vencimiento,cantidad_total,cantidad_disponible,proveedor,costo_anual
+Microsoft Office 365,2023,Suscripción,,2024-12-31,100,95,Microsoft Chile,600000
+Windows 11 Pro,OEM,XXXXX-XXXXX-XXXXX,,2099-12-31,50,48,Falabella S.A.,150000
+AutoCAD 2023,2023,Volumen,ACAD-2023-KEY,2024-06-30,20,18,Autodesk,1200000
+Adobe Creative Cloud,2023,Suscripción,,2024-08-15,30,27,Adobe Chile,800000
+Antivirus Kaspersky,2023,Volumen,KASP-2023-KEY,2024-12-31,200,180,Kaspersky Lab,400000

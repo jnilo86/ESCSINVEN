@@ -1,0 +1,7 @@
+rut,nombre,cargo,area_departamento,email,telefono,tipo
+12.345.678-9,Juan Pérez González,Analista TI,TI,juan.perez@instituto.cl,+56912345678,Persona
+13.456.789-0,María López Silva,Jefe RRHH,RRHH,maria.lopez@instituto.cl,+56987654321,Persona
+14.567.890-1,Pedro Sánchez Torres,Técnico Soporte,TI,pedro.sanchez@instituto.cl,+56911223344,Persona
+15.678.901-2,Carmen Gloria Ruiz,Coordinadora Académica,Académica,carmen.ruiz@instituto.cl,+56955667788,Persona
+99.999.999-9,Sala de Profesores,,,sala.profesores@instituto.cl,,Sala
+88.888.888-8,Bodega Central,Encargado Bodega,Logística,bodega@instituto.cl,,Area

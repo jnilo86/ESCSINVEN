@@ -35,6 +35,14 @@ Sistema integral de gestión patrimonial TI para el control, seguimiento y audit
 - Préstamos temporales con fecha límite y alertas de vencimiento
 - Regularización de activos históricos
 
+### Importación Masiva CSV (NUEVO v3.0)
+- Carga masiva de activos desde archivos CSV
+- Importación de responsables, software y componentes
+- Validación automática de datos y formatos
+- Reporte detallado de errores por fila
+- Auditoría completa de cada importación
+- Plantillas CSV incluidas en `/docs/csv_templates/`
+
 ### Documentación Automática
 - Generación de actas de entrega/devolución en PDF
 - Códigos QR para etiquetado de activos
@@ -209,12 +217,17 @@ inventario-escs/
 | `adjuntos_fotos` | Fotos y evidencia documental |
 | `logs_auditoria` | Registro inmutable de operaciones |
 | `qr_historial` | Auditoría de impresión de etiquetas |
+| `importaciones_csv` | Auditoría de importaciones masivas (NUEVO) |
+| `importaciones_csv_errores` | Errores detallados por fila (NUEVO) |
 
 ### Stored Procedures Clave
 
 - `sp_Dashboard_KPIs`: Indicadores ejecutivos
 - `sp_Activos_Por_Responsable`: Activos asignados a un RUT
 - `sp_Generar_Numero_Orden`: Consecutivo de movimientos
+- `sp_Importar_Activos_CSV`: Importación masiva desde JSON (NUEVO)
+- `sp_Obtener_Historial_Importaciones`: Consulta historial CSV (NUEVO)
+- `sp_Obtener_Errores_Importacion`: Obtiene errores por importación (NUEVO)
 
 ### Triggers de Auditoría
 
@@ -255,6 +268,14 @@ GET    /api/movimientos             - Listar movimientos
 POST   /api/movimientos/entrega     - Registrar entrega
 POST   /api/movimientos/devolucion  - Registrar devolución
 POST   /api/movimientos/prestamo    - Registrar préstamo
+```
+
+### Importación CSV (NUEVO)
+```
+POST   /api/importacion/csv         - Subir y procesar archivo CSV
+GET    /api/importacion/historial   - Obtener historial de importaciones
+GET    /api/importacion/errores/:id - Obtener errores de importación
+POST   /api/importacion/reintentar/:id - Reintentar importación fallida
 ```
 
 ---

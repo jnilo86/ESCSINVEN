@@ -1,0 +1,6 @@
+eqp_code,serial_number,tipo_activo,marca,modelo,descripcion,estado,fecha_compra,valor_compra,vida_util_anios,proveedor_compra,numero_orden_compra,ubicacion_fisica,observado
+EQP-0001,SNC123456,Notebook,Dell,Latitude 5420,Notebook corporativo departamento TI,Disponible,2023-01-15,850000,5,TecnoChile S.A.,OC-2023-001,Bodega Principal,0
+EQP-0002,SNC123457,Desktop,HP,ProDesk 600 G5,Desktop sala de clases,Disponible,2023-02-20,650000,5,CompuMall Ltda,OC-2023-015,Sala A-101,0
+EQP-0003,SNC123458,Monitor,LG,24MK430H,Monitor 24 pulgadas,Disponible,2023-03-10,120000,3,Imperio Digital,OC-2023-022,Oficina 204,0
+EQP-0004,SNC123459,Impresora,Epson,LQ-2090,Impresora matricial contabilidad,En Reparacion,2022-11-05,450000,4,Falabella S.A.,OC-2022-089,Contabilidad,1
+EQP-0005,SNC123460,Notebook,Lenovo,ThinkPad E14,Notebook administrativo,Asignado,2023-04-18,780000,5,Centrosoft Chile,OC-2023-045,Administración,0

@@ -252,11 +252,38 @@ CREATE TABLE logs_auditoria (
     id_log BIGINT PRIMARY KEY IDENTITY(1,1),
     fecha_evento DATETIME DEFAULT GETDATE(),
     id_usuario INT FOREIGN KEY REFERENCES usuarios(id_usuario),
-    accion_realizada NVARCHAR(100), -- INSERT, UPDATE, DELETE, LOGIN, IMPRIMIR
+    accion_realizada NVARCHAR(100), -- INSERT, UPDATE, DELETE, LOGIN, IMPRIMIR, IMPORT_CSV
     tabla_afectada NVARCHAR(50),
     registro_id_afectado INT,
     detalles_cambios NVARCHAR(MAX), -- JSON con valores antes y después
     ip_origen NVARCHAR(45)
+);
+
+-- Tabla: Auditoría de Importaciones CSV (v3.0)
+CREATE TABLE importaciones_csv (
+    id_importacion BIGINT PRIMARY KEY IDENTITY(1,1),
+    nombre_archivo NVARCHAR(255) NOT NULL,
+    ruta_archivo NVARCHAR(255),
+    tipo_importacion NVARCHAR(50) NOT NULL CHECK (tipo_importacion IN ('Activos', 'Responsables', 'Software', 'Componentes')),
+    fecha_importacion DATETIME DEFAULT GETDATE(),
+    id_usuario INT FOREIGN KEY REFERENCES usuarios(id_usuario),
+    total_filas INT DEFAULT 0,
+    filas_exitosas INT DEFAULT 0,
+    filas_erroneas INT DEFAULT 0,
+    estado NVARCHAR(20) DEFAULT 'Procesando' CHECK (estado IN ('Procesando', 'Completado', 'Fallido', 'Parcial')),
+    mensaje_error NVARCHAR(MAX),
+    duracion_segundos DECIMAL(10,2)
+);
+
+-- Tabla: Errores Detallados de Importación CSV
+CREATE TABLE importaciones_csv_errores (
+    id_error BIGINT PRIMARY KEY IDENTITY(1,1),
+    id_importacion BIGINT FOREIGN KEY REFERENCES importaciones_csv(id_importacion) ON DELETE CASCADE,
+    numero_fila INT NOT NULL,
+    columna NVARCHAR(100),
+    valor_invalido NVARCHAR(MAX),
+    mensaje_error NVARCHAR(MAX),
+    datos_fila_completos NVARCHAR(MAX) -- JSON con todos los datos de la fila
 );
 
 -- =============================================================================
@@ -372,6 +399,135 @@ BEGIN
     WHERE numero_orden LIKE @Prefijo + '-' + @FechaHoy + '%';
     
     SET @NumeroOrden = @Prefijo + '-' + @FechaHoy + '-' + RIGHT('000' + CAST(@Consecutivo AS NVARCHAR), 3);
+END;
+GO
+
+-- SP: Importar Activos desde CSV (v3.0)
+CREATE PROCEDURE sp_Importar_Activos_CSV
+    @IdImportacion BIGINT,
+    @JsonDatos NVARCHAR(MAX) -- JSON array con los datos del CSV
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @TotalFilas INT = 0;
+    DECLARE @FilasExitosas INT = 0;
+    DECLARE @FilasErroneas INT = 0;
+    DECLARE @MensajeError NVARCHAR(MAX) = '';
+    
+    BEGIN TRY
+        -- Parsear JSON y procesar cada fila
+        INSERT INTO activos (eqp_code, serial_number, tipo_activo, marca, modelo, descripcion, estado, fecha_compra, valor_compra, vida_util_anios, proveedor_compra, numero_orden_compra, ubicacion_fisica, observado)
+        SELECT 
+            eqp_code,
+            serial_number,
+            tipo_activo,
+            marca,
+            modelo,
+            descripcion,
+            ISNULL(estado, 'Disponible'),
+            CASE WHEN fecha_compra = '' THEN NULL ELSE TRY_CAST(fecha_compra AS DATE) END,
+            TRY_CAST(valor_compra AS DECIMAL(18,2)),
+            TRY_CAST(vida_util_anios AS INT),
+            proveedor_compra,
+            numero_orden_compra,
+            ubicacion_fisica,
+            CASE WHEN observado = '1' OR LOWER(observado) = 'true' THEN 1 ELSE 0 END
+        FROM OPENJSON(@JsonDatos)
+        WITH (
+            eqp_code NVARCHAR(50) '$.eqp_code',
+            serial_number NVARCHAR(100) '$.serial_number',
+            tipo_activo NVARCHAR(50) '$.tipo_activo',
+            marca NVARCHAR(50) '$.marca',
+            modelo NVARCHAR(100) '$.modelo',
+            descripcion NVARCHAR(255) '$.descripcion',
+            estado NVARCHAR(30) '$.estado',
+            fecha_compra NVARCHAR(20) '$.fecha_compra',
+            valor_compra NVARCHAR(20) '$.valor_compra',
+            vida_util_anios NVARCHAR(10) '$.vida_util_anios',
+            proveedor_compra NVARCHAR(150) '$.proveedor_compra',
+            numero_orden_compra NVARCHAR(50) '$.numero_orden_compra',
+            ubicacion_fisica NVARCHAR(100) '$.ubicacion_fisica',
+            observado NVARCHAR(10) '$.observado'
+        );
+        
+        SET @FilasExitosas = @@ROWCOUNT;
+        
+        -- Actualizar estado de la importación
+        UPDATE importaciones_csv
+        SET 
+            total_filas = @FilasExitosas,
+            filas_exitosas = @FilasExitosas,
+            filas_erroneas = 0,
+            estado = 'Completado',
+            duracion_segundos = DATEDIFF(SECOND, fecha_importacion, GETDATE())
+        WHERE id_importacion = @IdImportacion;
+        
+        -- Registrar en auditoría
+        INSERT INTO logs_auditoria (accion_realizada, tabla_afectada, detalles_cambios)
+        VALUES ('IMPORT_CSV', 'activos', JSON_QUERY('{"importacion_id": ' + CAST(@IdImportacion AS NVARCHAR) + ', "filas": ' + CAST(@FilasExitosas AS NVARCHAR) + '}'));
+        
+    END TRY
+    BEGIN CATCH
+        SET @MensajeError = ERROR_MESSAGE();
+        SET @FilasErroneas = 1;
+        
+        -- Registrar error detallado
+        INSERT INTO importaciones_csv_errores (id_importacion, numero_fila, columna, valor_invalido, mensaje_error)
+        VALUES (@IdImportacion, 0, 'GENERAL', @JsonDatos, @MensajeError);
+        
+        -- Actualizar estado fallido
+        UPDATE importaciones_csv
+        SET 
+            estado = 'Fallido',
+            mensaje_error = @MensajeError,
+            filas_erroneas = @FilasErroneas,
+            duracion_segundos = DATEDIFF(SECOND, fecha_importacion, GETDATE())
+        WHERE id_importacion = @IdImportacion;
+        
+        THROW;
+    END CATCH
+END;
+GO
+
+-- SP: Obtener historial de importaciones
+CREATE PROCEDURE sp_Obtener_Historial_Importaciones
+    @TopN INT = 50
+AS
+BEGIN
+    SELECT TOP (@TopN)
+        i.id_importacion,
+        i.nombre_archivo,
+        i.tipo_importacion,
+        i.fecha_importacion,
+        i.estado,
+        i.total_filas,
+        i.filas_exitosas,
+        i.filas_erroneas,
+        i.duracion_segundos,
+        u.nombre_completo AS usuario_responsable,
+        CASE WHEN e.id_error IS NOT NULL THEN 1 ELSE 0 END AS tiene_errores
+    FROM importaciones_csv i
+    LEFT JOIN usuarios u ON i.id_usuario = u.id_usuario
+    LEFT JOIN importaciones_csv_errores e ON i.id_importacion = e.id_importacion
+    ORDER BY i.fecha_importacion DESC;
+END;
+GO
+
+-- SP: Obtener errores de una importación específica
+CREATE PROCEDURE sp_Obtener_Errores_Importacion
+    @IdImportacion BIGINT
+AS
+BEGIN
+    SELECT 
+        numero_fila,
+        columna,
+        valor_invalido,
+        mensaje_error,
+        datos_fila_completos
+    FROM importaciones_csv_errores
+    WHERE id_importacion = @IdImportacion
+    ORDER BY numero_fila;
 END;
 GO
 

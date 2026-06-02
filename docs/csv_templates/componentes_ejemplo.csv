@@ -1,0 +1,7 @@
+eqp_code,tipo_componente,marca_modelo,serial_componente,capacidad,observacion,es_original
+EQP-0001,RAM,Kingston HyperX,KHX123456,16GB,Upgrade desde 8GB,0
+EQP-0001,SSD,Samsung 970 EVO,S97N12345,512GB,Reemplazo HDD original,0
+EQP-0002,RAM,Crucial,CRU987654,8GB,,1
+EQP-0002,HDD,Seagate Barracuda,ST1000DM,1TB,Disco original de fábrica,1
+EQP-0003,Bateria,Dell Original,DELL-BAT-001,52Wh,Batería de repuesto,0
+EQP-0004,Pantalla,LG Display,LP156WH6,15.6 pulgadas,Reemplazo por rotura,0
