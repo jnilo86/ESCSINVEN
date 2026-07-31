@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # Base de datos SQL Server
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: escs_db
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${DB_SA_PASSWORD:-YourStrong@Passw0rd!}
+      - MSSQL_PID=Express
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+      - ./database/01_master_database.sql:/scripts/01_master_database.sql:ro
+    ports:
+      - "1433:1433"
+    networks:
+      - escs_network
+    restart: unless-stopped
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "${DB_SA_PASSWORD:-YourStrong@Passw0rd!}" -Q "SELECT 1" || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Backend Node.js
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: escs_backend
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - DB_SERVER=db
+      - DB_PORT=1433
+      - DB_NAME=InventarioESCS
+      - DB_USER=sa
+      - DB_PASSWORD=${DB_SA_PASSWORD:-YourStrong@Passw0rd!}
+      - DB_ENCRYPT=false
+      - DB_TRUST_CERT=true
+      - JWT_SECRET=${JWT_SECRET:-cambia_esto_por_una_clave_muy_segura_en_produccion_12345}
+      - JWT_EXPIRES_IN=8h
+      - CORS_ORIGIN=*
+    volumes:
+      - backend_uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - escs_network
+    restart: unless-stopped
+    expose:
+      - "5000"
+
+  # Frontend Nginx
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: escs_frontend
+    environment:
+      - NGINX_PORT=${APP_PORT:-8080}
+    ports:
+      - "${APP_PORT:-8080}:80"
+    depends_on:
+      - backend
+    networks:
+      - escs_network
+    restart: unless-stopped
+
+volumes:
+  sqlserver_data:
+    driver: local
+  backend_uploads:
+    driver: local
+
+networks:
+  escs_network:
+    driver: bridge
